@@ -1,0 +1,12 @@
+[
+  {
+    "item": "Schlafen",
+    "done": false,
+    "position": 0
+  },
+  {
+    "item": "Putzen",
+    "done": false,
+    "position": 1
+  }
+]
