@@ -1,2 +1,2 @@
-#This is a simple cli ToDo App written in Rust
-#Learning basic Rust
+# This is a simple cli ToDo App written in Rust
+# Journey on learning Rust
