@@ -1,19 +1,23 @@
-use clap::Parser;
 use core::fmt;
 use serde::{Deserialize, Serialize};
-use std::fs::{self, OpenOptions};
+use std::{
+    fs::{self, OpenOptions},
+    io::Write,
+};
 
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about=None)]
-struct Args {
-    #[arg(short, long, default_value = "show")]
-    action: String,
+#[derive(Debug)]
+struct NewArgs {
+    action: Action,
+    suffix: String,
+}
 
-    #[arg(short, long, default_value = "")]
-    item: String,
-
-    #[arg(short, long, default_value = "999")]
-    position: usize,
+#[derive(Debug)]
+enum Action {
+    Add,
+    Update,
+    Remove,
+    Exit,
+    Help,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -60,7 +64,6 @@ impl ToDos {
         match todo_opt {
             Some(todo) => {
                 todo.done = !todo.done;
-                println!("{}", todo.done);
             }
             None => {
                 eprintln!("No todo found to update. Given index: {}", position);
@@ -97,7 +100,7 @@ impl ToDos {
 impl fmt::Display for ToDos {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         _ = write!(f, "Todos: \n\n");
-        _ = write!(f, "   Done |  ToDo\n");
+        _ = write!(f, "Nr Done |  ToDo\n");
         let todos: &Vec<_> = &self.todos;
         for todo in todos {
             let done = if todo.done { "[x]" } else { "[ ]" };
@@ -108,29 +111,57 @@ impl fmt::Display for ToDos {
 }
 
 fn main() {
-    let args = Args::parse();
     let mut todos = ToDos::new().expect("Initialisierung fehlgeschlagen");
-    if args.action == "insert" {
-        todos.insert(args.item);
-        save_todos(&todos);
-    } else if args.action == "update" {
-        match convert_position_to_index(args.position, todos.todos.len()) {
+    println!("{}", todos);
+    loop {
+        let input = prompt("> ");
+        let result = parse_input(&input);
+        if result.is_err() {
+            eprintln!("{}", result.unwrap_err());
+            break;
+        }
+        println!();
+        let args = result.unwrap();
+        if handle_args(args, &mut todos) {
+            break;
+        }
+    }
+}
+
+fn handle_args(args: NewArgs, todos: &mut ToDos) -> bool {
+    match args.action {
+        Action::Add => {
+            todos.insert(args.suffix);
+            save_todos(&todos);
+            false
+        }
+        Action::Update => match convert_position_to_index(&args.suffix, todos.todos.len()) {
             Ok(index) => {
                 todos.update(index);
                 save_todos(&todos);
+                false
             }
-            Err(err) => eprintln!("Invalid Index {}", err),
-        }
-    } else if args.action == "remove" {
-        match convert_position_to_index(args.position, todos.todos.len()) {
+            Err(err) => {
+                eprintln!("Invalid Index {}", err);
+                false
+            }
+        },
+        Action::Remove => match convert_position_to_index(&args.suffix, todos.todos.len()) {
             Ok(index) => {
                 todos.remove(index);
                 save_todos(&todos);
+                false
             }
-            Err(err) => eprintln!("Invalid Index {}", err),
+            Err(err) => {
+                eprintln!("Invalid Index {}", err);
+                false
+            }
+        },
+        Action::Help => {
+            println!("This are all the valid input:\n add \"todo\", update \"number\", remove \"number\" , exit or help");
+            false
         }
-    } else if args.action == "show" {
-        println!("{}", todos)
+        Action::Exit => true,
     }
 }
 
@@ -141,9 +172,62 @@ fn save_todos(todos: &ToDos) {
     }
 }
 
-fn convert_position_to_index(position: usize, list_size: usize) -> Result<usize, usize> {
-    match position < 1 || position > list_size {
-        false => Ok(position - 1),
-        true => Err(position),
+fn convert_position_to_index(position: &str, list_size: usize) -> Result<usize, &'static str> {
+    match position.parse::<usize>() {
+        Err(_) => Err("Not a valid Number"),
+        Ok(position) => match position < 1 || position > list_size {
+            false => Ok(position - 1),
+            true => Err("Not a valid index"),
+        },
     }
+}
+
+fn parse_input(line: &str) -> Result<NewArgs, &'static str> {
+    let mut iter = line.splitn(2, " ");
+    let action_str = iter.next();
+    if action_str.is_none() {
+        return Err("No Action defined");
+    }
+    let action = get_action(action_str.unwrap());
+    if action.is_err() {
+        return Err(action.unwrap_err());
+    }
+    match iter.next() {
+        Some(suffix) => Ok(NewArgs {
+            action: action.unwrap(),
+            suffix: suffix.to_string(),
+        }),
+        None => Ok(NewArgs {
+            action: action.unwrap(),
+            suffix: "".to_string(),
+        }),
+    }
+}
+
+fn get_action(action_str: &str) -> Result<Action, &'static str> {
+    if action_str == "add" {
+        Ok(Action::Add)
+    } else if action_str == "update" {
+        Ok(Action::Update)
+    } else if action_str == "remove" {
+        Ok(Action::Remove)
+    } else if action_str == "exit" {
+        Ok(Action::Exit)
+    } else if action_str == "help" {
+        Ok(Action::Help)
+    } else {
+        Err("Invalid Action!")
+    }
+}
+
+fn prompt(name: &str) -> String {
+    let mut line = String::new();
+    print!("{}", name);
+    std::io::stdout()
+        .flush()
+        .expect("Could not write to terminal");
+    std::io::stdin()
+        .read_line(&mut line)
+        .expect("Could not read input!");
+    line.trim().to_string()
 }

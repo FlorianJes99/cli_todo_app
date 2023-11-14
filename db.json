@@ -8,5 +8,15 @@
     "item": "Putzen",
     "done": false,
     "position": 1
+  },
+  {
+    "item": "Rust lernen",
+    "done": false,
+    "position": 2
+  },
+  {
+    "item": "Bday feiern",
+    "done": false,
+    "position": 3
   }
 ]
