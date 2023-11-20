@@ -117,8 +117,8 @@ fn main() {
         let input = prompt("> ");
         let result = parse_input(&input);
         if result.is_err() {
-            eprintln!("{}", result.unwrap_err());
-            break;
+            println!("{}\n{}", &result.unwrap_err(), get_help_string());
+            continue;
         }
         println!();
         let args = result.unwrap();
@@ -158,11 +158,15 @@ fn handle_args(args: NewArgs, todos: &mut ToDos) -> bool {
             }
         },
         Action::Help => {
-            println!("This are all the valid input:\n add \"todo\", update \"number\", remove \"number\" , exit or help");
+            println!("{}", get_help_string());
             false
         }
         Action::Exit => true,
     }
+}
+
+fn get_help_string() -> &'static str {
+    "This are valid inputs:\n add \"todo\", update \"number\", remove \"number\" , exit or help"
 }
 
 fn save_todos(todos: &ToDos) {

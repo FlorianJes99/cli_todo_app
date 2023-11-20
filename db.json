@@ -1,7 +1,7 @@
 [
   {
     "item": "Schlafen",
-    "done": false,
+    "done": true,
     "position": 0
   },
   {
@@ -13,10 +13,5 @@
     "item": "Rust lernen",
     "done": false,
     "position": 2
-  },
-  {
-    "item": "Bday feiern",
-    "done": false,
-    "position": 3
   }
 ]
